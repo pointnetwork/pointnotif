@@ -1,4 +1,4 @@
-var eventsAvailable = [];
+var eventsAvailable = {};
 
 /* const response = await window.top.fetch(`${ host }/v1/api/${ path }`, {
  *                 cache: 'no-cache',
@@ -12,7 +12,7 @@ var eventsAvailable = [];
  *             }); */
 
 function confirmedEvents(events) {
-  console.log('omega23', events);
+
 }
 
 async function subscribeToEvents() {
@@ -29,7 +29,15 @@ async function subscribeToEvents() {
     {code: `var events = ${JSON.stringify(eventsChecked)};`},
     () => {
       let executing = browser.tabs.executeScript({file: "/content_scripts/subscribe.js"})
-      console.log('omega3')
+      executing.then(confirmedEvents);
+  });
+}
+
+function subscribeToEvent(eventId) {
+  let executing = browser.tabs.executeScript(
+    {code: `var events = ${JSON.stringify(eventsAvailable[eventId])};`},
+    () => {
+      let executing = browser.tabs.executeScript({file: "/content_scripts/subscribe.js"})
       executing.then(confirmedEvents);
   });
 }
@@ -42,21 +50,39 @@ function injectEvents(frameEvents) {
   for (let i = 0; i < frameEvents.length; i++) {
     // Loop over each event.
     for (let k = 0; k < frameEvents[i].length; k++) {
-      let event = frameEvents[i][k];
-      let id = `notif_${i}_${k}`;
+      const event = frameEvents[i][k];
+      const id = `notif_${i}_${k}`;
+      const checked = (event.isSub ? 'checked' : '');
       event.id = id;
-      // ids.push(id);
-      eventsAvailable.push(event);
-      eventsList.innerHTML += `<input type="checkbox" id="${id}" name="${id}" value="${id}">`;
-      eventsList.innerHTML += `<label for="${id}">${event.name}</label><br>`;
+      // eventsAvailable.push(event);
+      
+      eventsAvailable[id] = event
+      
+      /* eventsList.innerHTML += `<input type="checkbox" id="${id}" name="${id}" value="${id}" onclick="subscribeToEvent(${id})" ${checked}>`;
+       * eventsList.innerHTML += `<label for="${id}">${event.name}</label><br>`; */
+
+      const input = document.createElement('input');
+      input.setAttribute('type', 'checkbox');
+      input.setAttribute('id', id);
+      input.setAttribute('value', id);
+      input.checked = checked;
+      input.onclick = (() => subscribeToEvent(id));
+
+      const label = document.createElement('label');
+      label.setAttribute('for', id)
+      label.innerHTML = event.name;
+
+      eventsList.appendChild(input);
+      eventsList.appendChild(label);
+      eventsList.appendChild(document.createElement('br'));
     }
   }
 
   // TODO: Create the DOM element and attach onclick event to it.
-  eventsList.innerHTML += `<br><button id="subscribe">Subscribe</button>`;
+  // eventsList.innerHTML += `<br><button id="subscribe">Subscribe</button>`;
   // eventsList.innerHTML += `<br><button onclick="subscribeToEvents()">Subscribe</button>`;
-  let subscribe = document.querySelector('#subscribe');
-  subscribe.onclick = subscribeToEvents;
+  /* let subscribe = document.querySelector('#subscribe');
+   * subscribe.onclick = subscribeToEvents; */
 }
 
 let executing = browser.tabs.executeScript({file: "/content_scripts/detect_events.js"})
